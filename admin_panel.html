@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel</title>
     <style>
-        /* Existing styles remain unchanged */
         body {
             background-color: #121212;
             color: #fff;
@@ -236,13 +235,13 @@
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = "Delete";
                 deleteButton.onclick = async function () {
-                    const { error } = await supabase
+                    const { error: deleteError } = await supabase
                         .from('employees')
                         .delete()
                         .eq('id', employee.id);
 
-                    if (error) {
-                        console.error('Error deleting employee:', error);
+                    if (deleteError) {
+                        console.error('Error deleting employee:', deleteError);
                         alert("Failed to delete employee.");
                     } else {
                         alert("Employee deleted successfully!");
@@ -273,7 +272,7 @@
             if (newName && newEmployerId && newPassword && newRole) {
                 const { error: updateError } = await supabase
                     .from('employees')
-                    .update({ name: newName, employer_id: newEmployerId, role: newRole })
+                    .update({ name: newName, employer_id: newEmployerId, password: newPassword, role: newRole })
                     .eq('id', employeeId);
 
                 if (updateError) {
@@ -307,7 +306,7 @@
                 return;
             }
 
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('employees')
                 .insert([{ name: newName, employer_id: newEmployerId, password: newPassword, role: newRole }])
                 .onConflict('name')
