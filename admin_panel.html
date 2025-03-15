@@ -86,10 +86,38 @@
             width: auto;
             padding: 5px 10px;
         }
+     /* Existing styles remain unchanged */
+        #add-user-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        .modal-content {
+            margin-bottom: 10px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            background-color: #333;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
     <h2>Admin Panel</h2>
+    <button id="add-user-btn">Add User</button>
     <button id="edit-participant-btn">Edit Participant Options</button>
     <div class="container">
         <div class="user-list">
@@ -108,7 +136,31 @@
             </table>
         </div>
     </div>
-
+    <!-- Modal for Adding a New User -->
+    <div id="add-user-modal">
+        <h3>Add New User</h3>
+        <div class="modal-content">
+            <label>Name:</label>
+            <input type="text" id="new-name-input" placeholder="Enter name">
+        </div>
+        <div class="modal-content">
+            <label>Employer ID:</label>
+            <input type="text" id="new-employer-id-input" placeholder="Enter employer ID">
+        </div>
+        <div class="modal-content">
+            <label>Password:</label>
+            <input type="password" id="new-password-input" placeholder="Enter password">
+        </div>
+        <div class="modal-content">
+            <label>Role:</label>
+            <select id="new-role-select">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+        <button id="save-user-btn">Save User</button>
+        <button id="close-add-user-modal-btn">Close</button>
+    </div>
     <!-- Modal for Editing Participant Options -->
     <div id="edit-participant-modal">
         <h3>Edit Participant Options</h3>
@@ -120,7 +172,6 @@
         <button id="save-options-btn">Save Changes</button>
         <button id="close-modal-btn">Close</button>
     </div>
-
     <script>
         const userTableBody = document.getElementById('user-table').getElementsByTagName('tbody')[0];
         const editParticipantBtn = document.getElementById('edit-participant-btn');
@@ -130,6 +181,10 @@
         const participantOptionsEditor = document.getElementById('participant-options-editor');
         const newOptionInput = document.getElementById('new-option-input');
         const addOptionBtn = document.getElementById('add-option-btn');
+        const addUserBtn = document.getElementById('add-user-btn');
+        const addUserModal = document.getElementById('add-user-modal');
+        const closeAddUserModalBtn = document.getElementById('close-add-user-modal-btn');
+        const saveUserBtn = document.getElementById('save-user-btn');
 
         let employees = JSON.parse(localStorage.getItem('employees')) || [];
         let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
@@ -139,46 +194,31 @@
         ];
 
         function populateUserTable() {
-    userTableBody.innerHTML = "";
-
-    // Sort employees alphabetically by name
-    employees.sort((a, b) => {
-        const nameA = a.split(" - ")[0].toLowerCase();
-        const nameB = b.split(" - ")[0].toLowerCase();
-        return nameA.localeCompare(nameB);
-    });
-
-    // Update localStorage with sorted employees
-    localStorage.setItem('employees', JSON.stringify(employees));
-
-    // Populate the user table
-    employees.forEach(employee => {
-        const [name, employerId] = employee.split(" - ");
-        const password = passwords[employee] || "";
-        const role = roles[employee] || "user";
-
-        const newRow = userTableBody.insertRow();
-        newRow.insertCell(0).textContent = name;
-        newRow.insertCell(1).textContent = employerId;
-        newRow.insertCell(2).textContent = password;
-        newRow.insertCell(3).textContent = role;
-
-        const actionsCell = newRow.insertCell(4);
-        const editButton = document.createElement('button');
-        editButton.textContent = "Edit";
-        editButton.onclick = function () {
-            editUser(employee);
-        };
-        actionsCell.appendChild(editButton);
-
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = "Delete";
-        deleteButton.onclick = function () {
-            deleteUser(employee);
-        };
-        actionsCell.appendChild(deleteButton);
-    });
-}
+            userTableBody.innerHTML = "";
+            employees.forEach(employee => {
+                const [name, employerId] = employee.split(" - ");
+                const password = passwords[employee] || "";
+                const role = roles[employee] || "user";
+                const newRow = userTableBody.insertRow();
+                newRow.insertCell(0).textContent = name;
+                newRow.insertCell(1).textContent = employerId;
+                newRow.insertCell(2).textContent = password;
+                newRow.insertCell(3).textContent = role;
+                const actionsCell = newRow.insertCell(4);
+                const editButton = document.createElement('button');
+                editButton.textContent = "Edit";
+                editButton.onclick = function () {
+                    editUser(employee);
+                };
+                actionsCell.appendChild(editButton);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = "Delete";
+                deleteButton.onclick = function () {
+                    deleteUser(employee);
+                };
+                actionsCell.appendChild(deleteButton);
+            });
+        }
 
         function editUser(employee) {
             const [name, employerId] = employee.split(" - ");
@@ -186,7 +226,6 @@
             const newEmployerId = prompt("Enter new employer ID:", employerId);
             const newPassword = prompt("Enter new password:", passwords[employee] || "");
             const newRole = prompt("Enter role (user/admin):", roles[employee] || "user");
-
             if (newName && newEmployerId && newPassword && newRole) {
                 delete passwords[employee];
                 delete roles[employee];
@@ -228,12 +267,10 @@
             participationOptions.forEach((optionText, index) => {
                 const rowDiv = document.createElement('div');
                 rowDiv.className = "option-row";
-
                 const input = document.createElement('input');
                 input.type = "text";
                 input.value = optionText;
                 rowDiv.appendChild(input);
-
                 const removeButton = document.createElement('button');
                 removeButton.textContent = "Remove";
                 removeButton.onclick = function () {
@@ -241,10 +278,43 @@
                     populateParticipantOptionsEditor();
                 };
                 rowDiv.appendChild(removeButton);
-
                 participantOptionsEditor.appendChild(rowDiv);
             });
         }
+
+        addUserBtn.addEventListener('click', function () {
+            addUserModal.style.display = "block";
+        });
+
+        closeAddUserModalBtn.addEventListener('click', function () {
+            addUserModal.style.display = "none";
+        });
+
+        saveUserBtn.addEventListener('click', function () {
+            const newName = document.getElementById('new-name-input').value.trim();
+            const newEmployerId = document.getElementById('new-employer-id-input').value.trim();
+            const newPassword = document.getElementById('new-password-input').value.trim();
+            const newRole = document.getElementById('new-role-select').value;
+
+            if (newName && newEmployerId && newPassword) {
+                const newEmployee = `${newName} - ${newEmployerId}`;
+                if (!employees.includes(newEmployee)) {
+                    employees.push(newEmployee);
+                    passwords[newEmployee] = newPassword;
+                    roles[newEmployee] = newRole;
+                    localStorage.setItem('employees', JSON.stringify(employees));
+                    localStorage.setItem('passwords', JSON.stringify(passwords));
+                    localStorage.setItem('roles', JSON.stringify(roles));
+                    alert("User added successfully!");
+                    populateUserTable();
+                    addUserModal.style.display = "none";
+                } else {
+                    alert("User already exists!");
+                }
+            } else {
+                alert("Please fill in all fields!");
+            }
+        });
 
         editParticipantBtn.addEventListener('click', function () {
             populateParticipantOptionsEditor();
