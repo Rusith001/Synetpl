@@ -206,6 +206,31 @@
                 return;
             }
 
+            if (data.length === 0) {
+                // Insert default admin account if the table is empty
+                const { error: insertError } = await supabase
+                    .from('employees')
+                    .insert([
+                        { name: "Rusith", employer_id: "SL0126", password: "admin123", role: "admin" }
+                    ]);
+
+                if (insertError) {
+                    console.error('Error inserting default admin:', insertError);
+                    alert("Failed to initialize default admin account.");
+                    return;
+                }
+
+                // Fetch the newly inserted data
+                const { data: newData } = await supabase
+                    .from('employees')
+                    .select('*');
+                renderDropdown(newData);
+            } else {
+                renderDropdown(data);
+            }
+        }
+
+        function renderDropdown(data) {
             const nameDropdown = document.getElementById('name');
             nameDropdown.innerHTML = ""; // Clear existing options
 
@@ -227,9 +252,9 @@
         async function checkAccess(name, password) {
             const [employeeName] = name.split(" - ");
             const { data, error } = await supabase
-                .from('passwords')
+                .from('employees')
                 .select('*')
-                .eq('employee_name', employeeName)
+                .eq('name', employeeName)
                 .single();
 
             if (error) {

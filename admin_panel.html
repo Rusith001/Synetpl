@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel</title>
     <style>
+        /* Existing styles remain unchanged */
         body {
             background-color: #121212;
             color: #fff;
@@ -56,7 +57,7 @@
             color: #121212;
             box-shadow: 0 0 10px #00ffcc;
         }
-        #edit-participant-modal {
+        #edit-participant-modal, #add-user-modal {
             display: none;
             position: fixed;
             top: 50%;
@@ -85,20 +86,6 @@
         .option-row button {
             width: auto;
             padding: 5px 10px;
-        }
-        #add-user-modal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            max-height: 80vh;
-            overflow-y: auto;
-            background-color: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
         .modal-content {
             margin-bottom: 10px;
@@ -204,13 +191,38 @@
                 return;
             }
 
+            if (data.length === 0) {
+                // Insert default admin account if the table is empty
+                const { error: insertError } = await supabase
+                    .from('employees')
+                    .insert([
+                        { name: "Rusith", employer_id: "SL0126", password: "admin123", role: "admin" }
+                    ]);
+
+                if (insertError) {
+                    console.error('Error inserting default admin:', insertError);
+                    alert("Failed to initialize default admin account.");
+                    return;
+                }
+
+                // Fetch the newly inserted data
+                const { data: newData } = await supabase
+                    .from('employees')
+                    .select('*');
+                renderUserTable(newData);
+            } else {
+                renderUserTable(data);
+            }
+        }
+
+        function renderUserTable(data) {
             userTableBody.innerHTML = "";
 
             data.forEach(employee => {
                 const newRow = userTableBody.insertRow();
                 newRow.insertCell(0).textContent = employee.name;
                 newRow.insertCell(1).textContent = employee.employer_id;
-                newRow.insertCell(2).textContent = "********"; // Passwords should not be displayed
+                newRow.insertCell(2).textContent = "********"; // Mask password
                 newRow.insertCell(3).textContent = employee.role;
 
                 const actionsCell = newRow.insertCell(4);
@@ -276,49 +288,6 @@
             }
         }
 
-        async function populateParticipantOptionsEditor() {
-            const { data, error } = await supabase
-                .from('participation_options')
-                .select('*');
-
-            if (error) {
-                console.error('Error fetching participation options:', error);
-                return;
-            }
-
-            participantOptionsEditor.innerHTML = "";
-
-            data.forEach((option, index) => {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = "option-row";
-
-                const input = document.createElement('input');
-                input.type = "text";
-                input.value = option.option_text;
-                rowDiv.appendChild(input);
-
-                const removeButton = document.createElement('button');
-                removeButton.textContent = "Remove";
-                removeButton.onclick = async function () {
-                    const { error: deleteError } = await supabase
-                        .from('participation_options')
-                        .delete()
-                        .eq('id', option.id);
-
-                    if (deleteError) {
-                        console.error('Error deleting option:', deleteError);
-                        alert("Failed to delete option.");
-                    } else {
-                        alert("Option deleted successfully!");
-                        populateParticipantOptionsEditor(); // Refresh the editor
-                    }
-                };
-                rowDiv.appendChild(removeButton);
-
-                participantOptionsEditor.appendChild(rowDiv);
-            });
-        }
-
         addUserBtn.addEventListener('click', function () {
             addUserModal.style.display = "block";
         });
@@ -338,30 +307,19 @@
                 return;
             }
 
-            const { error: insertError } = await supabase
+            const { error } = await supabase
                 .from('employees')
-                .insert([{ name: newName, employer_id: newEmployerId, role: newRole }])
+                .insert([{ name: newName, employer_id: newEmployerId, password: newPassword, role: newRole }])
                 .onConflict('name')
                 .merge();
 
-            if (insertError) {
-                console.error('Error adding user:', insertError);
+            if (error) {
+                console.error('Error adding user:', error);
                 alert("Failed to add user.");
             } else {
-                const { error: passwordError } = await supabase
-                    .from('passwords')
-                    .insert([{ employee_name: newName, password: newPassword }])
-                    .onConflict('employee_name')
-                    .merge();
-
-                if (passwordError) {
-                    console.error('Error saving password:', passwordError);
-                    alert("Failed to save password.");
-                } else {
-                    alert("User added successfully!");
-                    populateUserTable(); // Refresh the table
-                    addUserModal.style.display = "none";
-                }
+                alert("User added successfully!");
+                populateUserTable(); // Refresh the table
+                addUserModal.style.display = "none";
             }
         });
 
@@ -412,6 +370,49 @@
                 editParticipantModal.style.display = "none";
             }
         });
+
+        async function populateParticipantOptionsEditor() {
+            const { data, error } = await supabase
+                .from('participation_options')
+                .select('*');
+
+            if (error) {
+                console.error('Error fetching participation options:', error);
+                return;
+            }
+
+            participantOptionsEditor.innerHTML = "";
+
+            data.forEach((option, index) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = "option-row";
+
+                const input = document.createElement('input');
+                input.type = "text";
+                input.value = option.option_text;
+                rowDiv.appendChild(input);
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = "Remove";
+                removeButton.onclick = async function () {
+                    const { error: deleteError } = await supabase
+                        .from('participation_options')
+                        .delete()
+                        .eq('id', option.id);
+
+                    if (deleteError) {
+                        console.error('Error deleting option:', deleteError);
+                        alert("Failed to delete option.");
+                    } else {
+                        alert("Option deleted successfully!");
+                        populateParticipantOptionsEditor(); // Refresh the editor
+                    }
+                };
+                rowDiv.appendChild(removeButton);
+
+                participantOptionsEditor.appendChild(rowDiv);
+            });
+        }
 
         // Initial Population
         populateUserTable();
