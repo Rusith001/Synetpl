@@ -172,8 +172,17 @@
         </div>
     </div>
     <button id="export-btn">Export to Excel</button>
+
+    <!-- Supabase Initialization Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
     <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://wxynamogiveovvlaozbk.supabase.co'; // Replace with YOUR_SUPABASE_URL
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4eW5hbW9naXZlb3Z2bGFvemJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMjg3NjksImV4cCI6MjA1NzYwNDc2OX0.ljvOFjK35NkoEykareRkpIL0bAp7OsDEo8GnNUR1DkI'; // Replace with YOUR_SUPABASE_ANON_KEY
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // DOM Elements
         const form = document.getElementById('data-form');
         const loginBtn = document.getElementById('login-btn');
         const participationSection = document.querySelector('.participation-section');
@@ -184,80 +193,141 @@
         const submittedDataTable = document.getElementById('submitted-data').getElementsByTagName('tbody')[0];
         const errorMessage = document.getElementById('error-message');
         const adminPanelLink = document.querySelector('.admin-panel-link');
-        let formData = JSON.parse(localStorage.getItem('formData')) || [];
-        let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
-        let employees = JSON.parse(localStorage.getItem('employees')) || [
-            "Kaveesha - SL0114", "Kaveen - SL0108", "Rukshani - SL0103", "Sulakshi - SL0074",
-            "Gayathmi - SL0102", "Kaushalya - SL0056", "Nethmi - SL0069", "Piumi - SL0111",
-            "Sulochana - SL0070", "Vishmi - SL0119", "Dilu - SL0073", "Dushan - SL0010",
-            "Nisheth - SL0098", "Rumesh - SL0117", "Rusith - SL0126", "Sewmini - SL0071",
-            "Achini - SL0120", "Chathurika - SL0122", "Malsha - Sl0106", "Apsara - SL0052",
-            "Chrishmila - SL0042", "Lakshika - SL0113", "Nimeshika - SL0044", "Shainy - SL0039",
-            "Kavishka - SL0121", "Parami - SL0112", "Rukshalini - SL0059", "Janns - SL0019"
-        ];
-        let roles = JSON.parse(localStorage.getItem('roles')) || {};
 
-        // Initialize default passwords and roles if not set
-        employees.forEach(employee => {
-            const [name] = employee.split(" - ");
-            if (!passwords[employee]) {
-                passwords[employee] = name;
+        // Functions
+        async function populateDropdown() {
+            const { data, error } = await supabase
+                .from('employees')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching employees:', error);
+                return;
             }
-            if (!roles[employee]) {
-                roles[employee] = "user"; // Default role is "user"
+
+            const nameDropdown = document.getElementById('name');
+            nameDropdown.innerHTML = ""; // Clear existing options
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            defaultOption.textContent = "Select an employee";
+            nameDropdown.appendChild(defaultOption);
+
+            data.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = `${employee.name} - ${employee.employer_id}`;
+                option.textContent = `${employee.name} - ${employee.employer_id}`;
+                nameDropdown.appendChild(option);
+            });
+        }
+
+        async function checkAccess(name, password) {
+            const [employeeName] = name.split(" - ");
+            const { data, error } = await supabase
+                .from('passwords')
+                .select('*')
+                .eq('employee_name', employeeName)
+                .single();
+
+            if (error) {
+                console.error('Error checking password:', error);
+                return false;
             }
-        });
-        localStorage.setItem('employees', JSON.stringify(employees));
-        localStorage.setItem('passwords', JSON.stringify(passwords));
-        localStorage.setItem('roles', JSON.stringify(roles));
 
-       function populateDropdown() {
-    const nameDropdown = document.getElementById('name');
-    nameDropdown.innerHTML = "";
-
-    // Sort employees alphabetically by name
-    employees.sort((a, b) => {
-        const nameA = a.split(" - ")[0].toLowerCase();
-        const nameB = b.split(" - ")[0].toLowerCase();
-        return nameA.localeCompare(nameB);
-    });
-
-    // Update localStorage with sorted employees
-    localStorage.setItem('employees', JSON.stringify(employees));
-
-    // Populate the dropdown
-    const defaultOption = document.createElement('option');
-    defaultOption.value = "";
-    defaultOption.disabled = true;
-    defaultOption.selected = true;
-    defaultOption.textContent = "Select an employee";
-    nameDropdown.appendChild(defaultOption);
-
-    employees.forEach(employee => {
-        const option = document.createElement('option');
-        option.value = employee;
-        option.textContent = employee;
-        nameDropdown.appendChild(option);
-    });
-}
-
-        function checkAccess(name, password) {
-            return passwords[name] === password;
+            return data.password === password;
         }
 
         function checkAdminAccess(name) {
-            return roles[name] === "admin" || name === "Rusith - SL0126";
+            const [employeeName] = name.split(" - ");
+            return employeeName === "Rusith"; // Example admin check
         }
 
-        loginBtn.addEventListener('click', function () {
+        async function populateParticipationOptions() {
+            const { data, error } = await supabase
+                .from('participation_options')
+                .select('option_text');
+
+            if (error) {
+                console.error('Error fetching participation options:', error);
+                return;
+            }
+
+            const participationOptionsContainer = document.getElementById('participation-options');
+            participationOptionsContainer.innerHTML = ""; // Clear existing options
+
+            data.forEach(option => {
+                const radioDiv = document.createElement('div');
+                const radioInput = document.createElement('input');
+                radioInput.type = "radio";
+                radioInput.name = "participate";
+                radioInput.value = option.option_text;
+                const radioLabel = document.createTextNode(option.option_text);
+                radioDiv.appendChild(radioInput);
+                radioDiv.appendChild(radioLabel);
+                participationOptionsContainer.appendChild(radioDiv);
+            });
+        }
+
+        async function updateTable() {
+            const { data, error } = await supabase
+                .from('form_data')
+                .select('*');
+
+            if (error) {
+                console.error('Error fetching form data:', error);
+                return;
+            }
+
+            submittedDataTable.innerHTML = ""; // Clear existing rows
+
+            data.forEach((entry, index) => {
+                const newRow = submittedDataTable.insertRow();
+                const selectCell = newRow.insertCell(0);
+                const checkbox = document.createElement('input');
+                checkbox.type = "checkbox";
+                checkbox.value = entry.id; // Use the Supabase `id` field
+                selectCell.appendChild(checkbox);
+                newRow.insertCell(1).textContent = index + 1;
+                newRow.insertCell(2).textContent = entry.name;
+                newRow.insertCell(3).textContent = entry.employer_id;
+                newRow.insertCell(4).textContent = entry.participate;
+
+                const actionsCell = newRow.insertCell(5);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = "Delete";
+                deleteButton.onclick = async function () {
+                    const { error } = await supabase
+                        .from('form_data')
+                        .delete()
+                        .eq('id', entry.id);
+
+                    if (error) {
+                        console.error('Error deleting entry:', error);
+                        alert("Failed to delete entry.");
+                    } else {
+                        alert("Entry deleted successfully!");
+                        updateTable(); // Refresh the table
+                    }
+                };
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        loginBtn.addEventListener('click', async function () {
             const nameInput = document.getElementById('name').value.trim();
             const passwordInput = document.getElementById('password').value.trim();
-            if (!checkAccess(nameInput, passwordInput)) {
+
+            if (!await checkAccess(nameInput, passwordInput)) {
                 loginErrorMessage.textContent = "Incorrect name or password!";
                 return;
             }
+
             loginErrorMessage.textContent = "";
             participationSection.style.display = "block";
+
             if (checkAdminAccess(nameInput)) {
                 adminPanelLink.style.display = "block";
             } else {
@@ -265,138 +335,93 @@
             }
         });
 
-        form.addEventListener('submit', function (event) {
+        form.addEventListener('submit', async function (event) {
             event.preventDefault();
             const nameInput = document.getElementById('name').value.trim();
             const participateInput = document.querySelector('input[name="participate"]:checked');
+
             if (!participateInput) {
                 errorMessage.textContent = "Please select a participation option.";
                 return;
             }
+
             errorMessage.textContent = "";
+
             const [name, employerId] = nameInput.split(" - ");
-            const existingEntryIndex = formData.findIndex(entry => entry.name === name);
-            const entry = {
-                name: name,
-                employerId: employerId,
-                participate: participateInput.value
-            };
-            if (existingEntryIndex !== -1) {
-                formData[existingEntryIndex] = entry;
+            const { error } = await supabase
+                .from('form_data')
+                .insert([{ name, employer_id: employerId, participate: participateInput.value }])
+                .onConflict('name')
+                .merge(); // Update if the entry already exists
+
+            if (error) {
+                console.error('Error saving form data:', error);
+                alert("Failed to submit registration.");
             } else {
-                formData.push(entry);
+                alert("Potluck registration submitted successfully!");
+                form.reset();
+                participationSection.style.display = "none";
+                updateTable(); // Refresh the table
             }
-            updateTable();
-            localStorage.setItem('formData', JSON.stringify(formData));
-            alert("Potluck registration submitted successfully!");
-            form.reset();
-            participationSection.style.display = "none";
         });
 
-        function updateTable() {
-            submittedDataTable.innerHTML = "";
-            formData.forEach((entry, index) => {
-                const newRow = submittedDataTable.insertRow();
-                const selectCell = newRow.insertCell(0);
-                const checkbox = document.createElement('input');
-                checkbox.type = "checkbox";
-                checkbox.value = index;
-                selectCell.appendChild(checkbox);
-                newRow.insertCell(1).textContent = index + 1;
-                newRow.insertCell(2).textContent = entry.name;
-                newRow.insertCell(3).textContent = entry.employerId;
-                newRow.insertCell(4).textContent = entry.participate;
-                const actionsCell = newRow.insertCell(5);
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = "Delete";
-                deleteButton.onclick = function () {
-                    handleAdminAction(() => {
-                        formData.splice(index, 1);
-                        updateTable();
-                        localStorage.setItem('formData', JSON.stringify(formData));
-                        alert("Entry deleted successfully!");
-                    });
-                };
-                actionsCell.appendChild(deleteButton);
-            });
-        }
+        resetAllBtn.addEventListener('click', async function () {
+            const { error } = await supabase
+                .from('form_data')
+                .delete()
+                .neq('id', 0); // Deletes all rows
 
-        resetAllBtn.addEventListener('click', function () {
-            handleAdminAction(() => {
-                formData = [];
-                updateTable();
-                localStorage.setItem('formData', JSON.stringify(formData));
+            if (error) {
+                console.error('Error resetting data:', error);
+                alert("Failed to reset data.");
+            } else {
                 alert("All data has been reset.");
-            });
+                updateTable(); // Refresh the table
+            }
         });
 
-        resetSelectedBtn.addEventListener('click', function () {
-            handleAdminAction(() => {
-                const selectedIndices = Array.from(submittedDataTable.querySelectorAll('input[type="checkbox"]:checked'))
-                    .map(checkbox => parseInt(checkbox.value));
-                formData = formData.filter((_, index) => !selectedIndices.includes(index));
-                updateTable();
-                localStorage.setItem('formData', JSON.stringify(formData));
+        resetSelectedBtn.addEventListener('click', async function () {
+            const selectedIds = Array.from(submittedDataTable.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(checkbox => parseInt(checkbox.value));
+
+            const { error } = await supabase
+                .from('form_data')
+                .delete()
+                .in('id', selectedIds);
+
+            if (error) {
+                console.error('Error deleting selected entries:', error);
+                alert("Failed to delete selected entries.");
+            } else {
                 alert("Selected entries have been deleted.");
-            });
+                updateTable(); // Refresh the table
+            }
         });
 
-        exportBtn.addEventListener('click', function () {
-            handleAdminAction(() => {
-                const headers = ['ID', 'Name', 'Employer ID', 'Participation'];
-                const exportData = formData.map((item, index) => [index + 1, item.name, item.employerId, item.participate]);
-                exportData.unshift(headers);
-                const ws = XLSX.utils.aoa_to_sheet(exportData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-                XLSX.writeFile(wb, 'potluck_registration.xlsx');
-            });
-        });
+        exportBtn.addEventListener('click', async function () {
+            const { data, error } = await supabase
+                .from('form_data')
+                .select('*');
 
-        function handleAdminAction(action) {
-            const nameInput = document.getElementById('name').value.trim();
-            if (!checkAdminAccess(nameInput)) {
-                alert("Only admins can perform this action.");
+            if (error) {
+                console.error('Error exporting data:', error);
+                alert("Failed to export data.");
                 return;
             }
-            const password = prompt("Enter admin password:");
-            if (password === "Synet1") {
-                action();
-            } else {
-                alert("Incorrect password!");
-            }
-        }
 
-        function populateParticipationOptions() {
-            const participationOptionsContainer = document.getElementById('participation-options');
-            participationOptionsContainer.innerHTML = ""; // Clear existing options
-            const participationOptions = JSON.parse(localStorage.getItem('participationOptions')) || [
-                "Chicken Rice", "Mix Rice", "Chicken Dolphin Kottu", "Mix Dolphin Kottu", "Veg Rice & Curry", "No"
-            ];
-            participationOptions.forEach(option => {
-                const radioDiv = document.createElement('div');
-                const radioInput = document.createElement('input');
-                radioInput.type = "radio";
-                radioInput.name = "participate";
-                radioInput.value = option;
-                const radioLabel = document.createTextNode(option);
-                radioDiv.appendChild(radioInput);
-                radioDiv.appendChild(radioLabel);
-                participationOptionsContainer.appendChild(radioDiv);
-            });
-        }
-
-        // Listen for changes to localStorage
-        window.addEventListener('storage', function () {
-            populateParticipationOptions(); // Refresh participation options
+            const headers = ['ID', 'Name', 'Employer ID', 'Participation'];
+            const exportData = data.map((item, index) => [index + 1, item.name, item.employer_id, item.participate]);
+            exportData.unshift(headers);
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            XLSX.writeFile(wb, 'potluck_registration.xlsx');
         });
 
-        // Initial population of participation options
-        populateParticipationOptions();
-
-        // Load existing data into the table and dropdown on page load
-        updateTable();
+        // Initial Population
         populateDropdown();
+        populateParticipationOptions();
+        updateTable();
     </script>
 </body>
 </html>

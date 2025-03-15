@@ -86,7 +86,6 @@
             width: auto;
             padding: 5px 10px;
         }
-     /* Existing styles remain unchanged */
         #add-user-modal {
             display: none;
             position: fixed;
@@ -172,7 +171,15 @@
         <button id="save-options-btn">Save Changes</button>
         <button id="close-modal-btn">Close</button>
     </div>
+    <!-- Supabase Initialization Script -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://wxynamogiveovvlaozbk.supabase.co'; // Replace with YOUR_SUPABASE_URL
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4eW5hbW9naXZlb3Z2bGFvemJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMjg3NjksImV4cCI6MjA1NzYwNDc2OX0.ljvOFjK35NkoEykareRkpIL0bAp7OsDEo8GnNUR1DkI'; // Replace with YOUR_SUPABASE_ANON_KEY
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // DOM Elements
         const userTableBody = document.getElementById('user-table').getElementsByTagName('tbody')[0];
         const editParticipantBtn = document.getElementById('edit-participant-btn');
         const editParticipantModal = document.getElementById('edit-participant-modal');
@@ -186,98 +193,128 @@
         const closeAddUserModalBtn = document.getElementById('close-add-user-modal-btn');
         const saveUserBtn = document.getElementById('save-user-btn');
 
-        let employees = JSON.parse(localStorage.getItem('employees')) || [];
-        let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
-        let roles = JSON.parse(localStorage.getItem('roles')) || {};
-        let participationOptions = JSON.parse(localStorage.getItem('participationOptions')) || [
-            "Chicken Rice", "Mix Rice", "Chicken Dolphin Kottu", "Mix Dolphin Kottu", "Veg Rice & Curry", "No"
-        ];
+        // Functions
+        async function populateUserTable() {
+            const { data, error } = await supabase
+                .from('employees')
+                .select('*');
 
-        function populateUserTable() {
+            if (error) {
+                console.error('Error fetching employees:', error);
+                return;
+            }
+
             userTableBody.innerHTML = "";
-            employees.forEach(employee => {
-                const [name, employerId] = employee.split(" - ");
-                const password = passwords[employee] || "";
-                const role = roles[employee] || "user";
+
+            data.forEach(employee => {
                 const newRow = userTableBody.insertRow();
-                newRow.insertCell(0).textContent = name;
-                newRow.insertCell(1).textContent = employerId;
-                newRow.insertCell(2).textContent = password;
-                newRow.insertCell(3).textContent = role;
+                newRow.insertCell(0).textContent = employee.name;
+                newRow.insertCell(1).textContent = employee.employer_id;
+                newRow.insertCell(2).textContent = "********"; // Passwords should not be displayed
+                newRow.insertCell(3).textContent = employee.role;
+
                 const actionsCell = newRow.insertCell(4);
                 const editButton = document.createElement('button');
                 editButton.textContent = "Edit";
                 editButton.onclick = function () {
-                    editUser(employee);
+                    editUser(employee.id);
                 };
                 actionsCell.appendChild(editButton);
+
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = "Delete";
-                deleteButton.onclick = function () {
-                    deleteUser(employee);
+                deleteButton.onclick = async function () {
+                    const { error } = await supabase
+                        .from('employees')
+                        .delete()
+                        .eq('id', employee.id);
+
+                    if (error) {
+                        console.error('Error deleting employee:', error);
+                        alert("Failed to delete employee.");
+                    } else {
+                        alert("Employee deleted successfully!");
+                        populateUserTable(); // Refresh the table
+                    }
                 };
                 actionsCell.appendChild(deleteButton);
             });
         }
 
-        function editUser(employee) {
-            const [name, employerId] = employee.split(" - ");
-            const newName = prompt("Enter new name:", name);
-            const newEmployerId = prompt("Enter new employer ID:", employerId);
-            const newPassword = prompt("Enter new password:", passwords[employee] || "");
-            const newRole = prompt("Enter role (user/admin):", roles[employee] || "user");
+        async function editUser(employeeId) {
+            const { data: employee, error } = await supabase
+                .from('employees')
+                .select('*')
+                .eq('id', employeeId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching employee:', error);
+                return;
+            }
+
+            const newName = prompt("Enter new name:", employee.name);
+            const newEmployerId = prompt("Enter new employer ID:", employee.employer_id);
+            const newPassword = prompt("Enter new password:", "********");
+            const newRole = prompt("Enter role (user/admin):", employee.role);
+
             if (newName && newEmployerId && newPassword && newRole) {
-                delete passwords[employee];
-                delete roles[employee];
-                const newEmployee = `${newName} - ${newEmployerId}`;
-                const index = employees.indexOf(employee);
-                if (index !== -1) {
-                    employees[index] = newEmployee;
+                const { error: updateError } = await supabase
+                    .from('employees')
+                    .update({ name: newName, employer_id: newEmployerId, role: newRole })
+                    .eq('id', employeeId);
+
+                if (updateError) {
+                    console.error('Error updating employee:', updateError);
+                    alert("Failed to update employee.");
+                } else {
+                    alert("Employee updated successfully!");
+                    populateUserTable(); // Refresh the table
                 }
-                passwords[newEmployee] = newPassword;
-                roles[newEmployee] = newRole;
-                localStorage.setItem('employees', JSON.stringify(employees));
-                localStorage.setItem('passwords', JSON.stringify(passwords));
-                localStorage.setItem('roles', JSON.stringify(roles));
-                alert("User updated successfully!");
-                populateUserTable();
             } else {
                 alert("Update canceled or incomplete.");
             }
         }
 
-        function deleteUser(employee) {
-            if (confirm(`Are you sure you want to delete ${employee}?`)) {
-                delete passwords[employee];
-                delete roles[employee];
-                const index = employees.indexOf(employee);
-                if (index !== -1) {
-                    employees.splice(index, 1);
-                }
-                localStorage.setItem('employees', JSON.stringify(employees));
-                localStorage.setItem('passwords', JSON.stringify(passwords));
-                localStorage.setItem('roles', JSON.stringify(roles));
-                alert("User deleted successfully!");
-                populateUserTable();
-            }
-        }
+        async function populateParticipantOptionsEditor() {
+            const { data, error } = await supabase
+                .from('participation_options')
+                .select('*');
 
-        function populateParticipantOptionsEditor() {
+            if (error) {
+                console.error('Error fetching participation options:', error);
+                return;
+            }
+
             participantOptionsEditor.innerHTML = "";
-            participationOptions.forEach((optionText, index) => {
+
+            data.forEach((option, index) => {
                 const rowDiv = document.createElement('div');
                 rowDiv.className = "option-row";
+
                 const input = document.createElement('input');
                 input.type = "text";
-                input.value = optionText;
+                input.value = option.option_text;
                 rowDiv.appendChild(input);
+
                 const removeButton = document.createElement('button');
                 removeButton.textContent = "Remove";
-                removeButton.onclick = function () {
-                    participationOptions.splice(index, 1);
-                    populateParticipantOptionsEditor();
+                removeButton.onclick = async function () {
+                    const { error: deleteError } = await supabase
+                        .from('participation_options')
+                        .delete()
+                        .eq('id', option.id);
+
+                    if (deleteError) {
+                        console.error('Error deleting option:', deleteError);
+                        alert("Failed to delete option.");
+                    } else {
+                        alert("Option deleted successfully!");
+                        populateParticipantOptionsEditor(); // Refresh the editor
+                    }
                 };
                 rowDiv.appendChild(removeButton);
+
                 participantOptionsEditor.appendChild(rowDiv);
             });
         }
@@ -290,29 +327,41 @@
             addUserModal.style.display = "none";
         });
 
-        saveUserBtn.addEventListener('click', function () {
+        saveUserBtn.addEventListener('click', async function () {
             const newName = document.getElementById('new-name-input').value.trim();
             const newEmployerId = document.getElementById('new-employer-id-input').value.trim();
             const newPassword = document.getElementById('new-password-input').value.trim();
             const newRole = document.getElementById('new-role-select').value;
 
-            if (newName && newEmployerId && newPassword) {
-                const newEmployee = `${newName} - ${newEmployerId}`;
-                if (!employees.includes(newEmployee)) {
-                    employees.push(newEmployee);
-                    passwords[newEmployee] = newPassword;
-                    roles[newEmployee] = newRole;
-                    localStorage.setItem('employees', JSON.stringify(employees));
-                    localStorage.setItem('passwords', JSON.stringify(passwords));
-                    localStorage.setItem('roles', JSON.stringify(roles));
-                    alert("User added successfully!");
-                    populateUserTable();
-                    addUserModal.style.display = "none";
-                } else {
-                    alert("User already exists!");
-                }
-            } else {
+            if (!newName || !newEmployerId || !newPassword) {
                 alert("Please fill in all fields!");
+                return;
+            }
+
+            const { error: insertError } = await supabase
+                .from('employees')
+                .insert([{ name: newName, employer_id: newEmployerId, role: newRole }])
+                .onConflict('name')
+                .merge();
+
+            if (insertError) {
+                console.error('Error adding user:', insertError);
+                alert("Failed to add user.");
+            } else {
+                const { error: passwordError } = await supabase
+                    .from('passwords')
+                    .insert([{ employee_name: newName, password: newPassword }])
+                    .onConflict('employee_name')
+                    .merge();
+
+                if (passwordError) {
+                    console.error('Error saving password:', passwordError);
+                    alert("Failed to save password.");
+                } else {
+                    alert("User added successfully!");
+                    populateUserTable(); // Refresh the table
+                    addUserModal.style.display = "none";
+                }
             }
         });
 
@@ -325,25 +374,46 @@
             editParticipantModal.style.display = "none";
         });
 
-        addOptionBtn.addEventListener('click', function () {
+        addOptionBtn.addEventListener('click', async function () {
             const newOption = newOptionInput.value.trim();
-            if (newOption && !participationOptions.includes(newOption)) {
-                participationOptions.push(newOption);
-                newOptionInput.value = "";
-                populateParticipantOptionsEditor();
+
+            if (!newOption) {
+                alert("Option cannot be empty!");
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('participation_options')
+                .insert([{ option_text: newOption }]);
+
+            if (error) {
+                console.error('Error adding option:', error);
+                alert("Failed to add option.");
             } else {
-                alert("Option already exists or is invalid!");
+                alert("Option added successfully!");
+                populateParticipantOptionsEditor(); // Refresh the editor
+                newOptionInput.value = "";
             }
         });
 
-        saveOptionsBtn.addEventListener('click', function () {
+        saveOptionsBtn.addEventListener('click', async function () {
             const inputs = Array.from(participantOptionsEditor.querySelectorAll('input[type="text"]'));
-            participationOptions = inputs.map(input => input.value.trim()).filter(value => value !== "");
-            localStorage.setItem('participationOptions', JSON.stringify(participationOptions));
-            alert("Participant options updated successfully!");
-            editParticipantModal.style.display = "none";
+            const updatedOptions = inputs.map(input => input.value.trim()).filter(value => value !== "");
+
+            const { error } = await supabase
+                .from('participation_options')
+                .upsert(updatedOptions.map(optionText => ({ option_text: optionText })));
+
+            if (error) {
+                console.error('Error saving options:', error);
+                alert("Failed to save options.");
+            } else {
+                alert("Participant options updated successfully!");
+                editParticipantModal.style.display = "none";
+            }
         });
 
+        // Initial Population
         populateUserTable();
     </script>
 </body>
