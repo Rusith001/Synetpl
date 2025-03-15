@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synet Team Potluck</title>
+    <style>
+        body {
+            background-color: #121212; /* Dark background */
+            color: #fff; /* Light text */
+            font-family: Arial, sans-serif;
+        }
+        h2 {
+            text-align: center;
+            color: #00ffcc; /* Neon cyan color */
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 30px #00ffcc;
+        }
+        .change-password-link, .admin-panel-link {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .admin-panel-link {
+            display: none; /* Hidden by default */
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .form-container, .table-container {
+            width: 48%;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #1e1e1e; /* Dark card background */
+        }
+        .form-container {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); /* Neon glow */
+        }
+        .table-container {
+            border-left: 2px solid #00ffcc; /* Neon cyan border */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333; /* Dark borders */
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #333; /* Dark background for headers */
+            color: #00ffcc; /* Neon cyan text */
+        }
+        td {
+            background-color: #222; /* Slightly lighter dark background */
+            color: #fff; /* White text */
+        }
+        input, button, select {
+            background-color: #333;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            width: 100%; /* Full width for alignment */
+        }
+        input[type="radio"] {
+    vertical-align: middle; /* Aligns radio buttons with the middle of the text */
+    margin-right: 10px; /* Adds spacing between the radio button and the text */
+    position: relative; /* Allows fine-tuning of vertical position */
+    top: 17px; /* Moves the radio button 3px downward */
+    background-color: transparent;
+    border: none;
+}
+        button {
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+        button:hover {
+            background-color: #00ffcc; /* Neon hover effect */
+            color: #121212;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+        .error-message {
+            color: #ff3333; /* Red for error messages */
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .admin-controls {
+            margin-top: 20px;
+        }
+        #export-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: #00ffcc; /* Neon cyan export button */
+            border: none;
+            padding: 10px;
+            color: #121212;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+        #export-btn:hover {
+            background-color: #00e6b8; /* Lighter neon effect */
+            box-shadow: 0 0 10px #00ffcc;
+        }
+        a {
+            color: #00ffcc;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h2>Synet Team Potluck</h2>
+    <!-- Change Password Link -->
+    <div class="change-password-link">
+        <a href="change_password.html">Change Password</a>
+    </div>
+    <!-- Admin Panel Link -->
+    <div class="admin-panel-link">
+        <a href="admin_panel.html">Admin Panel</a>
+    </div>
+    <div class="container">
+        <div class="form-container">
+            <form id="data-form">
+                <!-- Login Section -->
+                <div class="login-section">
+                    <label for="name">Select Employee:</label>
+                    <select id="name" name="name" required>
+                        <option value="" disabled selected>Select an employee</option>
+                    </select><br><br>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" required><br><br>
+                    <button type="button" id="login-btn">Login</button>
+                    <div id="login-error-message" class="error-message"></div>
+                </div>
+                <!-- Participation Section -->
+                <div class="participation-section" style="display: none;">
+                    <label>Participation:</label><br>
+                    <input type="radio" name="participate" value="Chicken Rice"> Chicken Rice<br>
+                    <input type="radio" name="participate" value="Mix Rice"> Mix Rice<br>
+                    <input type="radio" name="participate" value="Chicken Dolphin Kottu"> Chicken Dolphin Kottu<br>
+                    <input type="radio" name="participate" value="Mix Dolphin Kottu"> Mix Dolphin Kottu<br>
+                    <input type="radio" name="participate" value="Veg Rice & Curry"> Veg Rice & Curry<br>
+                    <input type="radio" name="participate" value="No"> No<br><br>
+                    <button type="submit">Submit</button>
+                    <div id="error-message" class="error-message"></div>
+                </div>
+            </form>
+        </div>
+        <div class="table-container">
+            <h3>Submitted Data</h3>
+            <table id="submitted-data">
+                <thead>
+                    <tr>
+                        <th>Select</th>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Employer ID</th>
+                        <th>Participation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="admin-controls">
+                <button id="reset-all-btn">Reset All</button>
+                <button id="reset-selected-btn">Reset Selected</button>
+            </div>
+        </div>
+    </div>
+    <button id="export-btn">Export to Excel</button>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <script>
+        const form = document.getElementById('data-form');
+        const loginBtn = document.getElementById('login-btn');
+        const participationSection = document.querySelector('.participation-section');
+        const loginErrorMessage = document.getElementById('login-error-message');
+        const exportBtn = document.getElementById('export-btn');
+        const resetAllBtn = document.getElementById('reset-all-btn');
+        const resetSelectedBtn = document.getElementById('reset-selected-btn');
+        const submittedDataTable = document.getElementById('submitted-data').getElementsByTagName('tbody')[0];
+        const errorMessage = document.getElementById('error-message');
+        const adminPanelLink = document.querySelector('.admin-panel-link');
+        let formData = JSON.parse(localStorage.getItem('formData')) || [];
+        let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
+        let employees = JSON.parse(localStorage.getItem('employees')) || [
+            "Kaveesha - SL0114", "Kaveen - SL0108", "Rukshani - SL0103", "Sulakshi - SL0074",
+            "Gayathmi - SL0102", "Kaushalya - SL0056", "Nethmi - SL0069", "Piumi - SL0111",
+            "Sulochana - SL0070", "Vishmi - SL0119", "Dilu - SL0073", "Dushan - SL0010",
+            "Nisheth - SL0098", "Rumesh - SL0117", "Rusith - SL0126", "Sewmini - SL0071",
+            "Achini - SL0120", "Chathurika - SL0122", "Malsha - Sl0106", "Apsara - SL0052",
+            "Chrishmila - SL0042", "Lakshika - SL0113", "Nimeshika - SL0044", "Shainy - SL0039",
+            "Kavishka - SL0121", "Parami - SL0112", "Rukshalini - SL0059", "Janns - SL0019"
+        ];
+        let roles = JSON.parse(localStorage.getItem('roles')) || {};
+
+        // Initialize default passwords and roles if not set
+        employees.forEach(employee => {
+            const [name] = employee.split(" - ");
+            if (!passwords[employee]) {
+                passwords[employee] = name;
+            }
+            if (!roles[employee]) {
+                roles[employee] = "user"; // Default role is "user"
+            }
+        });
+        localStorage.setItem('employees', JSON.stringify(employees));
+        localStorage.setItem('passwords', JSON.stringify(passwords));
+        localStorage.setItem('roles', JSON.stringify(roles));
+
+        function populateDropdown() {
+            const nameDropdown = document.getElementById('name');
+            nameDropdown.innerHTML = "";
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            defaultOption.textContent = "Select an employee";
+            nameDropdown.appendChild(defaultOption);
+            employees.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee;
+                option.textContent = employee;
+                nameDropdown.appendChild(option);
+            });
+        }
+
+        function checkAccess(name, password) {
+            return passwords[name] === password;
+        }
+
+        function checkAdminAccess(name) {
+            return roles[name] === "admin" || name === "Rusith - SL0126";
+        }
+
+        loginBtn.addEventListener('click', function () {
+            const nameInput = document.getElementById('name').value.trim();
+            const passwordInput = document.getElementById('password').value.trim();
+            if (!checkAccess(nameInput, passwordInput)) {
+                loginErrorMessage.textContent = "Incorrect name or password!";
+                return;
+            }
+            loginErrorMessage.textContent = "";
+            participationSection.style.display = "block";
+            if (checkAdminAccess(nameInput)) {
+                adminPanelLink.style.display = "block";
+            } else {
+                adminPanelLink.style.display = "none";
+            }
+        });
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('name').value.trim();
+            const participateInput = document.querySelector('input[name="participate"]:checked');
+            if (!participateInput) {
+                errorMessage.textContent = "Please select a participation option.";
+                return;
+            }
+            errorMessage.textContent = "";
+            const [name, employerId] = nameInput.split(" - ");
+            const existingEntryIndex = formData.findIndex(entry => entry.name === name);
+            const entry = {
+                name: name,
+                employerId: employerId,
+                participate: participateInput.value
+            };
+            if (existingEntryIndex !== -1) {
+                formData[existingEntryIndex] = entry;
+            } else {
+                formData.push(entry);
+            }
+            updateTable();
+            localStorage.setItem('formData', JSON.stringify(formData));
+            alert("Potluck registration submitted successfully!");
+            form.reset();
+            participationSection.style.display = "none";
+        });
+
+        function updateTable() {
+            submittedDataTable.innerHTML = "";
+            formData.forEach((entry, index) => {
+                const newRow = submittedDataTable.insertRow();
+                const selectCell = newRow.insertCell(0);
+                const checkbox = document.createElement('input');
+                checkbox.type = "checkbox";
+                checkbox.value = index;
+                selectCell.appendChild(checkbox);
+                newRow.insertCell(1).textContent = index + 1;
+                newRow.insertCell(2).textContent = entry.name;
+                newRow.insertCell(3).textContent = entry.employerId;
+                newRow.insertCell(4).textContent = entry.participate;
+                const actionsCell = newRow.insertCell(5);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = "Delete";
+                deleteButton.onclick = function () {
+                    handleAdminAction(() => {
+                        formData.splice(index, 1);
+                        updateTable();
+                        localStorage.setItem('formData', JSON.stringify(formData));
+                        alert("Entry deleted successfully!");
+                    });
+                };
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        resetAllBtn.addEventListener('click', function () {
+            handleAdminAction(() => {
+                formData = [];
+                updateTable();
+                localStorage.setItem('formData', JSON.stringify(formData));
+                alert("All data has been reset.");
+            });
+        });
+
+        resetSelectedBtn.addEventListener('click', function () {
+            handleAdminAction(() => {
+                const selectedIndices = Array.from(submittedDataTable.querySelectorAll('input[type="checkbox"]:checked'))
+                    .map(checkbox => parseInt(checkbox.value));
+                formData = formData.filter((_, index) => !selectedIndices.includes(index));
+                updateTable();
+                localStorage.setItem('formData', JSON.stringify(formData));
+                alert("Selected entries have been deleted.");
+            });
+        });
+
+        exportBtn.addEventListener('click', function () {
+            handleAdminAction(() => {
+                const headers = ['ID', 'Name', 'Employer ID', 'Participation'];
+                const exportData = formData.map((item, index) => [index + 1, item.name, item.employerId, item.participate]);
+                exportData.unshift(headers);
+                const ws = XLSX.utils.aoa_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+                XLSX.writeFile(wb, 'potluck_registration.xlsx');
+            });
+        });
+
+        function handleAdminAction(action) {
+            const nameInput = document.getElementById('name').value.trim();
+            if (!checkAdminAccess(nameInput)) {
+                alert("Only admins can perform this action.");
+                return;
+            }
+            const password = prompt("Enter admin password:");
+            if (password === "Synet1") {
+                action();
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        // Load existing data into the table and dropdown on page load
+        updateTable();
+        populateDropdown();
+    </script>
+</body>
+</html>

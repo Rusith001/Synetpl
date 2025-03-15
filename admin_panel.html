@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        h2 {
+            text-align: center;
+            color: #00ffcc;
+            text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 30px #00ffcc;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .user-list {
+            width: 48%;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #1e1e1e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+            color: #00ffcc;
+        }
+        td {
+            background-color: #222;
+        }
+        button {
+            background-color: #333;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #00ffcc;
+            color: #121212;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+        #edit-participant-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+        .option-controls {
+            margin-bottom: 10px;
+        }
+        .option-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .option-row input[type="text"] {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .option-row button {
+            width: auto;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Admin Panel</h2>
+    <button id="edit-participant-btn">Edit Participant Options</button>
+    <div class="container">
+        <div class="user-list">
+            <h3>User List</h3>
+            <table id="user-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Employer ID</th>
+                        <th>Password</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Participant Options -->
+    <div id="edit-participant-modal">
+        <h3>Edit Participant Options</h3>
+        <div class="option-controls">
+            <input type="text" id="new-option-input" placeholder="Enter new option">
+            <button id="add-option-btn">Add Option</button>
+        </div>
+        <div id="participant-options-editor"></div>
+        <button id="save-options-btn">Save Changes</button>
+        <button id="close-modal-btn">Close</button>
+    </div>
+
+    <script>
+        const userTableBody = document.getElementById('user-table').getElementsByTagName('tbody')[0];
+        const editParticipantBtn = document.getElementById('edit-participant-btn');
+        const editParticipantModal = document.getElementById('edit-participant-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const saveOptionsBtn = document.getElementById('save-options-btn');
+        const participantOptionsEditor = document.getElementById('participant-options-editor');
+        const newOptionInput = document.getElementById('new-option-input');
+        const addOptionBtn = document.getElementById('add-option-btn');
+
+        let employees = JSON.parse(localStorage.getItem('employees')) || [];
+        let passwords = JSON.parse(localStorage.getItem('passwords')) || {};
+        let roles = JSON.parse(localStorage.getItem('roles')) || {};
+        let participationOptions = JSON.parse(localStorage.getItem('participationOptions')) || [
+            "Chicken Rice", "Mix Rice", "Chicken Dolphin Kottu", "Mix Dolphin Kottu", "Veg Rice & Curry", "No"
+        ];
+
+        function populateUserTable() {
+            userTableBody.innerHTML = "";
+            employees.forEach(employee => {
+                const [name, employerId] = employee.split(" - ");
+                const password = passwords[employee] || "";
+                const role = roles[employee] || "user";
+                const newRow = userTableBody.insertRow();
+                newRow.insertCell(0).textContent = name;
+                newRow.insertCell(1).textContent = employerId;
+                newRow.insertCell(2).textContent = password;
+                newRow.insertCell(3).textContent = role;
+                const actionsCell = newRow.insertCell(4);
+                const editButton = document.createElement('button');
+                editButton.textContent = "Edit";
+                editButton.onclick = function () {
+                    editUser(employee);
+                };
+                actionsCell.appendChild(editButton);
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = "Delete";
+                deleteButton.onclick = function () {
+                    deleteUser(employee);
+                };
+                actionsCell.appendChild(deleteButton);
+            });
+        }
+
+        function editUser(employee) {
+            const [name, employerId] = employee.split(" - ");
+            const newName = prompt("Enter new name:", name);
+            const newEmployerId = prompt("Enter new employer ID:", employerId);
+            const newPassword = prompt("Enter new password:", passwords[employee] || "");
+            const newRole = prompt("Enter role (user/admin):", roles[employee] || "user");
+
+            if (newName && newEmployerId && newPassword && newRole) {
+                delete passwords[employee];
+                delete roles[employee];
+                const newEmployee = `${newName} - ${newEmployerId}`;
+                const index = employees.indexOf(employee);
+                if (index !== -1) {
+                    employees[index] = newEmployee;
+                }
+                passwords[newEmployee] = newPassword;
+                roles[newEmployee] = newRole;
+                localStorage.setItem('employees', JSON.stringify(employees));
+                localStorage.setItem('passwords', JSON.stringify(passwords));
+                localStorage.setItem('roles', JSON.stringify(roles));
+                alert("User updated successfully!");
+                populateUserTable();
+            } else {
+                alert("Update canceled or incomplete.");
+            }
+        }
+
+        function deleteUser(employee) {
+            if (confirm(`Are you sure you want to delete ${employee}?`)) {
+                delete passwords[employee];
+                delete roles[employee];
+                const index = employees.indexOf(employee);
+                if (index !== -1) {
+                    employees.splice(index, 1);
+                }
+                localStorage.setItem('employees', JSON.stringify(employees));
+                localStorage.setItem('passwords', JSON.stringify(passwords));
+                localStorage.setItem('roles', JSON.stringify(roles));
+                alert("User deleted successfully!");
+                populateUserTable();
+            }
+        }
+
+        function populateParticipantOptionsEditor() {
+            participantOptionsEditor.innerHTML = "";
+            participationOptions.forEach((optionText, index) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = "option-row";
+
+                const input = document.createElement('input');
+                input.type = "text";
+                input.value = optionText;
+                rowDiv.appendChild(input);
+
+                const removeButton = document.createElement('button');
+                removeButton.textContent = "Remove";
+                removeButton.onclick = function () {
+                    participationOptions.splice(index, 1);
+                    populateParticipantOptionsEditor();
+                };
+                rowDiv.appendChild(removeButton);
+
+                participantOptionsEditor.appendChild(rowDiv);
+            });
+        }
+
+        editParticipantBtn.addEventListener('click', function () {
+            populateParticipantOptionsEditor();
+            editParticipantModal.style.display = "block";
+        });
+
+        closeModalBtn.addEventListener('click', function () {
+            editParticipantModal.style.display = "none";
+        });
+
+        addOptionBtn.addEventListener('click', function () {
+            const newOption = newOptionInput.value.trim();
+            if (newOption && !participationOptions.includes(newOption)) {
+                participationOptions.push(newOption);
+                newOptionInput.value = "";
+                populateParticipantOptionsEditor();
+            } else {
+                alert("Option already exists or is invalid!");
+            }
+        });
+
+        saveOptionsBtn.addEventListener('click', function () {
+            const inputs = Array.from(participantOptionsEditor.querySelectorAll('input[type="text"]'));
+            participationOptions = inputs.map(input => input.value.trim()).filter(value => value !== "");
+            localStorage.setItem('participationOptions', JSON.stringify(participationOptions));
+            alert("Participant options updated successfully!");
+            editParticipantModal.style.display = "none";
+        });
+
+        populateUserTable();
+    </script>
+</body>
+</html>
