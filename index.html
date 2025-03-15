@@ -211,22 +211,35 @@
         localStorage.setItem('passwords', JSON.stringify(passwords));
         localStorage.setItem('roles', JSON.stringify(roles));
 
-        function populateDropdown() {
-            const nameDropdown = document.getElementById('name');
-            nameDropdown.innerHTML = "";
-            const defaultOption = document.createElement('option');
-            defaultOption.value = "";
-            defaultOption.disabled = true;
-            defaultOption.selected = true;
-            defaultOption.textContent = "Select an employee";
-            nameDropdown.appendChild(defaultOption);
-            employees.forEach(employee => {
-                const option = document.createElement('option');
-                option.value = employee;
-                option.textContent = employee;
-                nameDropdown.appendChild(option);
-            });
-        }
+       function populateDropdown() {
+    const nameDropdown = document.getElementById('name');
+    nameDropdown.innerHTML = "";
+
+    // Sort employees alphabetically by name
+    employees.sort((a, b) => {
+        const nameA = a.split(" - ")[0].toLowerCase();
+        const nameB = b.split(" - ")[0].toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    // Update localStorage with sorted employees
+    localStorage.setItem('employees', JSON.stringify(employees));
+
+    // Populate the dropdown
+    const defaultOption = document.createElement('option');
+    defaultOption.value = "";
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    defaultOption.textContent = "Select an employee";
+    nameDropdown.appendChild(defaultOption);
+
+    employees.forEach(employee => {
+        const option = document.createElement('option');
+        option.value = employee;
+        option.textContent = employee;
+        nameDropdown.appendChild(option);
+    });
+}
 
         function checkAccess(name, password) {
             return passwords[name] === password;

@@ -139,31 +139,46 @@
         ];
 
         function populateUserTable() {
-            userTableBody.innerHTML = "";
-            employees.forEach(employee => {
-                const [name, employerId] = employee.split(" - ");
-                const password = passwords[employee] || "";
-                const role = roles[employee] || "user";
-                const newRow = userTableBody.insertRow();
-                newRow.insertCell(0).textContent = name;
-                newRow.insertCell(1).textContent = employerId;
-                newRow.insertCell(2).textContent = password;
-                newRow.insertCell(3).textContent = role;
-                const actionsCell = newRow.insertCell(4);
-                const editButton = document.createElement('button');
-                editButton.textContent = "Edit";
-                editButton.onclick = function () {
-                    editUser(employee);
-                };
-                actionsCell.appendChild(editButton);
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = "Delete";
-                deleteButton.onclick = function () {
-                    deleteUser(employee);
-                };
-                actionsCell.appendChild(deleteButton);
-            });
-        }
+    userTableBody.innerHTML = "";
+
+    // Sort employees alphabetically by name
+    employees.sort((a, b) => {
+        const nameA = a.split(" - ")[0].toLowerCase();
+        const nameB = b.split(" - ")[0].toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    // Update localStorage with sorted employees
+    localStorage.setItem('employees', JSON.stringify(employees));
+
+    // Populate the user table
+    employees.forEach(employee => {
+        const [name, employerId] = employee.split(" - ");
+        const password = passwords[employee] || "";
+        const role = roles[employee] || "user";
+
+        const newRow = userTableBody.insertRow();
+        newRow.insertCell(0).textContent = name;
+        newRow.insertCell(1).textContent = employerId;
+        newRow.insertCell(2).textContent = password;
+        newRow.insertCell(3).textContent = role;
+
+        const actionsCell = newRow.insertCell(4);
+        const editButton = document.createElement('button');
+        editButton.textContent = "Edit";
+        editButton.onclick = function () {
+            editUser(employee);
+        };
+        actionsCell.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = "Delete";
+        deleteButton.onclick = function () {
+            deleteUser(employee);
+        };
+        actionsCell.appendChild(deleteButton);
+    });
+}
 
         function editUser(employee) {
             const [name, employerId] = employee.split(" - ");
