@@ -1,0 +1,22 @@
+name: Sync Data to Supabase
+on:
+  push:
+    branches:
+      - main
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js
+
+      - name: Run sync script
+        run: node sync-to-supabase.js
