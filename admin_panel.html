@@ -56,7 +56,7 @@
             color: #121212;
             box-shadow: 0 0 10px #00ffcc;
         }
-        #edit-participant-modal, #add-user-modal {
+        #edit-participant-modal {
             display: none;
             position: fixed;
             top: 50%;
@@ -86,6 +86,20 @@
             width: auto;
             padding: 5px 10px;
         }
+        #add-user-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
         .modal-content {
             margin-bottom: 10px;
         }
@@ -98,12 +112,19 @@
             color: #fff;
             border-radius: 5px;
         }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #00ffcc;
+        }
     </style>
 </head>
 <body>
     <h2>Admin Panel</h2>
     <button id="add-user-btn">Add User</button>
     <button id="edit-participant-btn">Edit Participant Options</button>
+    <div id="loading" class="loading">Loading...</div>
     <div class="container">
         <div class="user-list">
             <h3>User List</h3>
@@ -157,15 +178,15 @@
         <button id="save-options-btn">Save Changes</button>
         <button id="close-modal-btn">Close</button>
     </div>
-    <!-- Supabase Initialization Script -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://wxynamogiveovvlaozbk.supabase.co'; // Replace with YOUR_SUPABASE_URL
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind4eW5hbW9naXZlb3Z2bGFvemJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMjg3NjksImV4cCI6MjA1NzYwNDc2OX0.ljvOFjK35NkoEykareRkpIL0bAp7OsDEo8GnNUR1DkI'; // Replace with YOUR_SUPABASE_ANON_KEY
+        // Initialize Supabase client
+        const supabaseUrl = 'https://rlhxyuzmtardgxupkbxo.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsaHh5dXptdGFyZGd4dXBrYnhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIwMjgxOTQsImV4cCI6MjA1NzYwNDE5NH0.4OWmcqHCf-QKjU7azDcyy6Sc9O7mz6DLL35iQedCjFg';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        // DOM Elements
         const userTableBody = document.getElementById('user-table').getElementsByTagName('tbody')[0];
         const editParticipantBtn = document.getElementById('edit-participant-btn');
         const editParticipantModal = document.getElementById('edit-participant-modal');
@@ -178,115 +199,167 @@
         const addUserModal = document.getElementById('add-user-modal');
         const closeAddUserModalBtn = document.getElementById('close-add-user-modal-btn');
         const saveUserBtn = document.getElementById('save-user-btn');
+        const loadingElement = document.getElementById('loading');
 
-        // Functions
-        async function populateUserTable() {
-            const { data, error } = await supabase
-                .from('employees')
-                .select('*');
+        let employees = [];
+        let participationOptions = [];
 
-            if (error) {
+        // Function to show loading indicator
+        function showLoading() {
+            loadingElement.style.display = 'block';
+        }
+
+        // Function to hide loading indicator
+        function hideLoading() {
+            loadingElement.style.display = 'none';
+        }
+
+        // Fetch employees from Supabase
+        async function fetchEmployees() {
+            showLoading();
+            try {
+                const { data, error } = await supabase
+                    .from('employees')
+                    .select('*')
+                    .order('name', { ascending: true });
+                
+                if (error) throw error;
+                employees = data;
+                populateUserTable();
+            } catch (error) {
                 console.error('Error fetching employees:', error);
-                return;
-            }
-
-            if (data.length === 0) {
-                // Insert default admin account if the table is empty
-                const { error: insertError } = await supabase
-                    .from('employees')
-                    .insert([
-                        { name: "Rusith", employer_id: "SL0126", password: "admin123", role: "admin" }
-                    ]);
-
-                if (insertError) {
-                    console.error('Error inserting default admin:', insertError);
-                    alert("Failed to initialize default admin account.");
-                    return;
-                }
-
-                // Fetch the newly inserted data
-                const { data: newData } = await supabase
-                    .from('employees')
-                    .select('*');
-                renderUserTable(newData);
-            } else {
-                renderUserTable(data);
+                alert('Failed to load employees. Please try again.');
+            } finally {
+                hideLoading();
             }
         }
 
-        function renderUserTable(data) {
-            userTableBody.innerHTML = "";
+        // Fetch participation options from Supabase
+        async function fetchParticipationOptions() {
+            showLoading();
+            try {
+                const { data, error } = await supabase
+                    .from('participation_options')
+                    .select('*')
+                    .order('id', { ascending: true });
+                
+                if (error) throw error;
+                participationOptions = data.map(option => option.option_text);
+            } catch (error) {
+                console.error('Error fetching participation options:', error);
+                alert('Failed to load participation options. Please try again.');
+            } finally {
+                hideLoading();
+            }
+        }
 
-            data.forEach(employee => {
+        // Populate user table with data from Supabase
+        function populateUserTable() {
+            userTableBody.innerHTML = "";
+            employees.forEach(employee => {
                 const newRow = userTableBody.insertRow();
                 newRow.insertCell(0).textContent = employee.name;
                 newRow.insertCell(1).textContent = employee.employer_id;
-                newRow.insertCell(2).textContent = "********"; // Mask password
+                newRow.insertCell(2).textContent = employee.password;
                 newRow.insertCell(3).textContent = employee.role;
-
                 const actionsCell = newRow.insertCell(4);
+                
                 const editButton = document.createElement('button');
                 editButton.textContent = "Edit";
                 editButton.onclick = function () {
-                    editUser(employee.id);
+                    editUser(employee);
                 };
                 actionsCell.appendChild(editButton);
-
+                
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = "Delete";
-                deleteButton.onclick = async function () {
-                    const { error: deleteError } = await supabase
-                        .from('employees')
-                        .delete()
-                        .eq('id', employee.id);
-
-                    if (deleteError) {
-                        console.error('Error deleting employee:', deleteError);
-                        alert("Failed to delete employee.");
-                    } else {
-                        alert("Employee deleted successfully!");
-                        populateUserTable(); // Refresh the table
-                    }
+                deleteButton.onclick = function () {
+                    deleteUser(employee);
                 };
                 actionsCell.appendChild(deleteButton);
             });
         }
 
-        async function editUser(employeeId) {
-            const { data: employee, error } = await supabase
-                .from('employees')
-                .select('*')
-                .eq('id', employeeId)
-                .single();
-
-            if (error) {
-                console.error('Error fetching employee:', error);
-                return;
-            }
-
+        // Edit user function
+        async function editUser(employee) {
             const newName = prompt("Enter new name:", employee.name);
             const newEmployerId = prompt("Enter new employer ID:", employee.employer_id);
-            const newPassword = prompt("Enter new password:", "********");
+            const newPassword = prompt("Enter new password:", employee.password);
             const newRole = prompt("Enter role (user/admin):", employee.role);
-
+            
             if (newName && newEmployerId && newPassword && newRole) {
-                const { error: updateError } = await supabase
-                    .from('employees')
-                    .update({ name: newName, employer_id: newEmployerId, password: newPassword, role: newRole })
-                    .eq('id', employeeId);
-
-                if (updateError) {
-                    console.error('Error updating employee:', updateError);
-                    alert("Failed to update employee.");
-                } else {
-                    alert("Employee updated successfully!");
-                    populateUserTable(); // Refresh the table
+                showLoading();
+                try {
+                    const { error } = await supabase
+                        .from('employees')
+                        .update({ 
+                            name: newName, 
+                            employer_id: newEmployerId, 
+                            password: newPassword, 
+                            role: newRole 
+                        })
+                        .eq('id', employee.id);
+                    
+                    if (error) throw error;
+                    alert("User updated successfully!");
+                    await fetchEmployees();
+                } catch (error) {
+                    console.error('Error updating user:', error);
+                    alert('Failed to update user. Please try again.');
+                } finally {
+                    hideLoading();
                 }
             } else {
                 alert("Update canceled or incomplete.");
             }
         }
 
+        // Delete user function
+        async function deleteUser(employee) {
+            if (confirm(`Are you sure you want to delete ${employee.name} (${employee.employer_id})?`)) {
+                showLoading();
+                try {
+                    const { error } = await supabase
+                        .from('employees')
+                        .delete()
+                        .eq('id', employee.id);
+                    
+                    if (error) throw error;
+                    alert("User deleted successfully!");
+                    await fetchEmployees();
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    alert('Failed to delete user. Please try again.');
+                } finally {
+                    hideLoading();
+                }
+            }
+        }
+
+        // Populate participant options editor
+        function populateParticipantOptionsEditor() {
+            participantOptionsEditor.innerHTML = "";
+            participationOptions.forEach((optionText, index) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = "option-row";
+                
+                const input = document.createElement('input');
+                input.type = "text";
+                input.value = optionText;
+                rowDiv.appendChild(input);
+                
+                const removeButton = document.createElement('button');
+                removeButton.textContent = "Remove";
+                removeButton.onclick = function () {
+                    participationOptions.splice(index, 1);
+                    populateParticipantOptionsEditor();
+                };
+                rowDiv.appendChild(removeButton);
+                participantOptionsEditor.appendChild(rowDiv);
+            });
+        }
+
+        // Add User Modal functionality
         addUserBtn.addEventListener('click', function () {
             addUserModal.style.display = "block";
         });
@@ -295,126 +368,114 @@
             addUserModal.style.display = "none";
         });
 
+        // Save new user to Supabase
         saveUserBtn.addEventListener('click', async function () {
             const newName = document.getElementById('new-name-input').value.trim();
             const newEmployerId = document.getElementById('new-employer-id-input').value.trim();
             const newPassword = document.getElementById('new-password-input').value.trim();
             const newRole = document.getElementById('new-role-select').value;
 
-            if (!newName || !newEmployerId || !newPassword) {
-                alert("Please fill in all fields!");
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('employees')
-                .insert([{ name: newName, employer_id: newEmployerId, password: newPassword, role: newRole }])
-                .onConflict('name')
-                .merge();
-
-            if (error) {
-                console.error('Error adding user:', error);
-                alert("Failed to add user.");
+            if (newName && newEmployerId && newPassword) {
+                const employeeExists = employees.some(emp => 
+                    emp.name === newName && emp.employer_id === newEmployerId);
+                
+                if (!employeeExists) {
+                    showLoading();
+                    try {
+                        const { error } = await supabase
+                            .from('employees')
+                            .insert([{ 
+                                name: newName, 
+                                employer_id: newEmployerId, 
+                                password: newPassword, 
+                                role: newRole 
+                            }]);
+                        
+                        if (error) throw error;
+                        alert("User added successfully!");
+                        addUserModal.style.display = "none";
+                        document.getElementById('new-name-input').value = '';
+                        document.getElementById('new-employer-id-input').value = '';
+                        document.getElementById('new-password-input').value = '';
+                        await fetchEmployees();
+                    } catch (error) {
+                        console.error('Error adding user:', error);
+                        alert('Failed to add user. Please try again.');
+                    } finally {
+                        hideLoading();
+                    }
+                } else {
+                    alert("User already exists!");
+                }
             } else {
-                alert("User added successfully!");
-                populateUserTable(); // Refresh the table
-                addUserModal.style.display = "none";
+                alert("Please fill in all fields!");
             }
         });
 
+        // Edit participant options modal functionality
         editParticipantBtn.addEventListener('click', function () {
-            populateParticipantOptionsEditor();
-            editParticipantModal.style.display = "block";
+            fetchParticipationOptions().then(() => {
+                populateParticipantOptionsEditor();
+                editParticipantModal.style.display = "block";
+            });
         });
 
         closeModalBtn.addEventListener('click', function () {
             editParticipantModal.style.display = "none";
         });
 
-        addOptionBtn.addEventListener('click', async function () {
+        // Add new participation option
+        addOptionBtn.addEventListener('click', function () {
             const newOption = newOptionInput.value.trim();
-
-            if (!newOption) {
-                alert("Option cannot be empty!");
-                return;
-            }
-
-            const { data, error } = await supabase
-                .from('participation_options')
-                .insert([{ option_text: newOption }]);
-
-            if (error) {
-                console.error('Error adding option:', error);
-                alert("Failed to add option.");
-            } else {
-                alert("Option added successfully!");
-                populateParticipantOptionsEditor(); // Refresh the editor
+            if (newOption && !participationOptions.includes(newOption)) {
+                participationOptions.push(newOption);
                 newOptionInput.value = "";
+                populateParticipantOptionsEditor();
+            } else {
+                alert("Option already exists or is invalid!");
             }
         });
 
+        // Save participation options to Supabase
         saveOptionsBtn.addEventListener('click', async function () {
             const inputs = Array.from(participantOptionsEditor.querySelectorAll('input[type="text"]'));
             const updatedOptions = inputs.map(input => input.value.trim()).filter(value => value !== "");
-
-            const { error } = await supabase
-                .from('participation_options')
-                .upsert(updatedOptions.map(optionText => ({ option_text: optionText })));
-
-            if (error) {
-                console.error('Error saving options:', error);
-                alert("Failed to save options.");
-            } else {
+            
+            showLoading();
+            try {
+                // First delete all existing options
+                await supabase
+                    .from('participation_options')
+                    .delete()
+                    .gt('id', 0);
+                
+                // Then insert all the new/updated options
+                if (updatedOptions.length > 0) {
+                    const optionsToInsert = updatedOptions.map(option => ({
+                        option_text: option
+                    }));
+                    
+                    const { error } = await supabase
+                        .from('participation_options')
+                        .insert(optionsToInsert);
+                    
+                    if (error) throw error;
+                }
+                
                 alert("Participant options updated successfully!");
                 editParticipantModal.style.display = "none";
+            } catch (error) {
+                console.error('Error updating participation options:', error);
+                alert('Failed to update participation options. Please try again.');
+            } finally {
+                hideLoading();
             }
         });
 
-        async function populateParticipantOptionsEditor() {
-            const { data, error } = await supabase
-                .from('participation_options')
-                .select('*');
-
-            if (error) {
-                console.error('Error fetching participation options:', error);
-                return;
-            }
-
-            participantOptionsEditor.innerHTML = "";
-
-            data.forEach((option, index) => {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = "option-row";
-
-                const input = document.createElement('input');
-                input.type = "text";
-                input.value = option.option_text;
-                rowDiv.appendChild(input);
-
-                const removeButton = document.createElement('button');
-                removeButton.textContent = "Remove";
-                removeButton.onclick = async function () {
-                    const { error: deleteError } = await supabase
-                        .from('participation_options')
-                        .delete()
-                        .eq('id', option.id);
-
-                    if (deleteError) {
-                        console.error('Error deleting option:', deleteError);
-                        alert("Failed to delete option.");
-                    } else {
-                        alert("Option deleted successfully!");
-                        populateParticipantOptionsEditor(); // Refresh the editor
-                    }
-                };
-                rowDiv.appendChild(removeButton);
-
-                participantOptionsEditor.appendChild(rowDiv);
-            });
-        }
-
-        // Initial Population
-        populateUserTable();
+        // Initialize by fetching data
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchEmployees();
+        });
     </script>
 </body>
 </html>
